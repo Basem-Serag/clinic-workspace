@@ -26,18 +26,21 @@ jobs:
       # - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="e2e-ci"
 
       # Cache node_modules
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
+- uses: actions/setup-node@v4
+  with: { node-version: '20', cache: 'npm' }
+- run: npm ci
 
-      - run: npm ci --legacy-peer-deps
-      - run: npx cypress install
-
-      # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
-      # - run: npx nx-cloud record -- echo Hello World
-      # When you enable task distribution, run the e2e-ci task instead of e2e
-      - run: npx nx run-many -t lint test build e2e
-      # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
-      - run: npx nx fix-ci
-        if: always()
+- name: Cypress - angular-lab
+  uses: cypress-io/github-action@v6
+  with:
+    build: npx nx build angular-lab
+    start: npx nx serve angular-lab --port 4200
+    wait-on: 'http://localhost:4200'
+    command: npx nx e2e angular-lab-e2e
+- name: Cypress - clinic
+  uses: cypress-io/github-action@v6
+  with:
+    build: npx nx build clinic
+    start: npx nx serve clinic --port 4300
+    wait-on: 'http://localhost:4300'
+    command: npx nx e2e clinic-e2e

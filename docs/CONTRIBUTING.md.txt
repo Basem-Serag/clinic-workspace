@@ -1,9 +1,0 @@
-Learning routes → apps/katas/src/app/features/<topic>/
-
-Clinic features → apps/clinic/src/app/features/<feature>/
-
-Shared UI → libs/ui/src/lib/<component>/
-
-Data layer (models, API services) → libs/data-access/src/lib/
-
-Utilities/helpers/operators → libs/util/src/lib/
