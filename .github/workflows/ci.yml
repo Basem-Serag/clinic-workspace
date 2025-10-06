@@ -1,46 +1,85 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - master
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+  push:
+    branches: [main]
 
 permissions:
-  actions: read
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  main:
+  build-test:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Cache Nx
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: ${{ runner.os }}-nx-${{ hashFiles('**/package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-nx-
+
+      - name: Install
+        run: npm ci
+
+      - name: Print affected
+        id: affected
+        run: |
+          npx nx print-affected --base=${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || 'origin/main' }} --head=${{ github.sha }} --select=tasks > .affected
+          echo "tasks=$(cat .affected)" >> $GITHUB_OUTPUT
+
+      - name: Lint (affected)
+        run: npx nx affected -t lint --parallel=3 --base=origin/main --head=${{ github.sha }}
+
+      - name: Unit tests (affected, with coverage)
+        run: npx nx affected -t test --parallel=3 --base=origin/main --head=${{ github.sha }} --codeCoverage
+
+      - name: Build (affected)
+        run: npx nx affected -t build --parallel=2 --base=origin/main --head=${{ github.sha }}
+
+  e2e:
+    needs: build-test
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          filter: tree:0
-          fetch-depth: 0
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
 
-      # This enables task distribution via Nx Cloud
-      # Run this command as early as possible, before dependencies are installed
-      # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
-      # Uncomment this line to enable task distribution
-      # - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="e2e-ci"
+      # Example: run both angular-lab and clinic e2e. Adjust project names if Nx created different ones.
+      - name: Cypress - angular-lab
+        uses: cypress-io/github-action@v6
+        with:
+          build: npx nx build angular-lab
+          start: npx nx serve angular-lab --port 4200
+          wait-on: 'http://localhost:4200'
+          command: npx nx e2e angular-lab-e2e
 
-      # Cache node_modules
-- uses: actions/setup-node@v4
-  with: { node-version: '20', cache: 'npm' }
-- run: npm ci
-
-- name: Cypress - angular-lab
-  uses: cypress-io/github-action@v6
-  with:
-    build: npx nx build angular-lab
-    start: npx nx serve angular-lab --port 4200
-    wait-on: 'http://localhost:4200'
-    command: npx nx e2e angular-lab-e2e
-- name: Cypress - clinic
-  uses: cypress-io/github-action@v6
-  with:
-    build: npx nx build clinic
-    start: npx nx serve clinic --port 4300
-    wait-on: 'http://localhost:4300'
-    command: npx nx e2e clinic-e2e
+      - name: Cypress - clinic
+        uses: cypress-io/github-action@v6
+        with:
+          build: npx nx build clinic
+          start: npx nx serve clinic --port 4300
+          wait-on: 'http://localhost:4300'
+          command: npx nx e2e clinic-e2e
