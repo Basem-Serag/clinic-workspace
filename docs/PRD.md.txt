@@ -1,0 +1,34 @@
+# Clinic System – PRD v0.1
+
+## Problem
+Mixed NHS/private dental clinic needs faster patient intake, reliable scheduling, and auditable clinical notes.
+
+## Goals & Success Metrics
+- Reduce receptionist booking time by **40%**
+- Reduce no-show rate by **15%** via reminders
+- Data entry errors down **30%**
+- Accessibility: **AXE serious issues = 0**
+
+## Users & Roles
+- **Receptionist**: intake, schedule, cancel/reschedule
+- **Clinician**: view day list, record notes, check-in patient
+- **Admin**: manage users/roles, reports
+
+## Scope (MVP)
+1. **Auth & Roles** (JWT+refresh; guards & policies)
+2. **Patient Registry** (typed reactive forms; merge duplicates)
+3. **Appointments** (availability, reschedule/cancel, notifications)
+4. **Notes/Observations** (autosave, version history, AuditLog)
+5. **Reporting** (daily appts, no-shows, workload)
+
+## Non-Functionals
+- Security: route guards + server-side RBAC; validate inputs
+- Accessibility: WCAG 2.2 AA
+- Privacy: GDPR basics (data minimisation, DSRs)
+- Performance: SSR + hydration for public/marketing pages
+
+## Milestones
+- M1: Patient Registry
+- M2: Appointments
+- M3: Notes + AuditLog
+- M4: Reporting + SSR polish
